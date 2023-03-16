@@ -2,6 +2,8 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, \
 Flatten, Dense, Reshape, Conv2DTranspose, Activation    
 from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import Adam 
+from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
 
 
@@ -38,6 +40,19 @@ class Autoencoder:
         self.decoder.summary()
         self.model.summary()
 
+    def compile(self, learning_rate=0.0001):
+        optimizer = Adam(learning_rate=learning_rate)
+        mse_loss = MeanSquaredError()
+        self.model.compile(optimizer=optimizer, loss=mse_loss)
+
+    def train(self, x_train, batch_size, num_epochs):
+        self.model.fit(x_train, 
+                       x_train,
+                       batch_size,
+                       epochs = num_epochs,
+                       shuffle = True,
+                       )
+
     def _build(self):
         self._build_encoder()
         self._build_decoder()
@@ -46,7 +61,7 @@ class Autoencoder:
     def _build_autoencoder(self):
         model_input = self._model_input
         model_output = self.decoder(self.encoder(model_input))
-        self.model = Model(model_input, model_output, name="autoencoder ")
+        self.model = Model(model_input, model_output, name="autoencoder")
 
     def _build_decoder(self):
         decoder_input = self._add_decoder_input()
