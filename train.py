@@ -9,16 +9,18 @@ EPOCHS = 150
 
 SPECTROGRAMS_PATH = "./dataset/free-spoken-digit-dataset-master/spectrograms/"
 
-def load_ffsd(spectrograms_path,):
+def load_ffsd(spectrograms_path):
     x_train = []
+    file_paths = []
     for root, _, file_names in os.walk(spectrograms_path):
         for file_name in file_names:
             file_path = os.path.join(root, file_name)
             spectrogram = np.load(file_path)
             x_train.append(spectrogram)
+            file_paths.append(file_path)
     x_train = np.array(x_train)
     x_train = x_train[...,np.newaxis]
-    return x_train
+    return x_train, file_paths
 
 
 
@@ -38,6 +40,6 @@ def train(x_train, learning_rate, batch_size, epochs):
     
 
 if __name__ == "__main__":
-    x_train = load_ffsd(SPECTROGRAMS_PATH)
+    x_train, _ = load_ffsd(SPECTROGRAMS_PATH)
     vae = train(x_train, LEARNING_RATE, BATCH_SIZE, EPOCHS)
     vae.save("model")

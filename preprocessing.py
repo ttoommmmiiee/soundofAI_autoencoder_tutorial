@@ -94,6 +94,7 @@ class Saver:
     def save_feature(self, feature, file_path):
         save_path = self._generate_save_path(file_path)
         np.save(save_path, feature)
+        return save_path
 
     def _generate_save_path(self, file_path):
         file_name = os.path.split(file_path)[1]
