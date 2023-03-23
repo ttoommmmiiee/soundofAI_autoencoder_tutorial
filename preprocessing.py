@@ -11,6 +11,8 @@ import librosa
 import numpy as np
 import os
 import pickle
+import pyloudnorm as pyln
+from utils import is_hidden
 
 class Loader:
     '''Loader is responsible for loading an audio file'''
@@ -20,12 +22,23 @@ class Loader:
         self.mono = mono
 
     def load(self, file_path):
-        signal = librosa.load(file_path,
-                              sr=self.sample_rate,
-                              duration=self.duration,
-                              mono=self.mono,
-                              )[0]
-        return signal
+        if not is_hidden(file_path): 
+            signal = librosa.load(file_path,
+                                sr=self.sample_rate,
+                                duration=None,
+                                mono=self.mono,
+                                )[0]
+            return signal
+
+class Chopper: 
+    '''
+    Chooper is responsible for chopping long audio into smaller chunks
+    '''
+    def __init__(self) -> None:
+        pass
+
+    def chop(self, array):
+        choped_array = np.pad
 
 class Padder:
     '''Padder is responsible for applying padding to an array'''
@@ -45,6 +58,37 @@ class Padder:
                               mode=self.mode
                               )
         return padded_array
+
+class LoudnessNormaliser:
+    '''
+    LoudnessNormaliser normalises the loudness of the audio.
+    Mode selects between "peak" and "loudness". 
+    Mode is set to "peak" by  default.
+    '''
+
+    def __init__(self, sample_rate, target_db, mode="peak"):
+        self.sample_rate = sample_rate
+        self.mode = mode
+        self.target = target_db
+
+    def normalise(self, signal):
+        normalised_audio = []
+        if self.mode == "peak":
+            if np.max(np.abs(signal)) > 0:
+                normalised_audio = pyln.normalize.peak(signal, self.target)
+            else:
+                normalised_audio = signal
+        else:
+            # measure the loudness first
+            meter = pyln.Meter(self.sample_rate)  # create BS.1770 meter
+            loudness_prenormal = meter.integrated_loudness(signal)
+
+            # loudness normalize audio to -12 LUFS
+            normalised_audio = pyln.normalize.loudness(
+                signal, loudness_prenormal, self.target)
+        return normalised_audio        
+
+    
 
 class LogSpectrogramExtractor:
     '''
@@ -91,14 +135,14 @@ class Saver:
         self.feature_save_dir = feature_save_dir
         self.min_max_values_saved_dir = min_max_values_saved_dir
     
-    def save_feature(self, feature, file_path):
-        save_path = self._generate_save_path(file_path)
+    def save_feature(self, feature, file_path, i):
+        save_path = self._generate_save_path(file_path, i)
         np.save(save_path, feature)
         return save_path
 
-    def _generate_save_path(self, file_path):
+    def _generate_save_path(self, file_path, i):
         file_name = os.path.split(file_path)[1]
-        save_path = os.path.join(self.feature_save_dir, file_name + ".npy")
+        save_path = os.path.join(self.feature_save_dir, file_name + f"_{i}.npy")
         return save_path
 
     def save_min_max_values(self, min_max_values):
@@ -118,6 +162,7 @@ class PreprocessingPipeline:
     applying the following steps to each file:
         1 - load a file
         2 - padd a signal if necessary
+        2b - Normalise peaks to -1db
         3 - extract log spectrogram from signal
         4 - normalise spectrogram
         5 - save the normalised spectrogram 
@@ -126,6 +171,7 @@ class PreprocessingPipeline:
 
     def __init__(self):
         self.padder = None
+        self.loudness_normaliser = None
         self.extractor = None
         self.normaliser = None
         self.saver = None
@@ -146,17 +192,30 @@ class PreprocessingPipeline:
         for root, _, files in os.walk(audio_file_dir):
             for file in files:
                 file_path = os.path.join(root,file)
-                self._process_file(file_path)
+                self._chopper_loop(file_path)
                 print(f"Processed file {file_path}")
         self.saver.save_min_max_values(self.min_max_values)
 
-    def _process_file(self, file_path):
+    def _chopper_loop(self,file_path):
         signal = self.loader.load(file_path)
+        if len(signal) > self._num_expected_samples:
+            for i in range(int(len(signal) / self._num_expected_samples)):
+                start_index = i * self._num_expected_samples
+                end_index = (i + 1) * self._num_expected_samples
+    
+                self._process_file(
+                    signal[start_index:end_index],
+                    file_path,
+                    i
+                    )
+
+    def _process_file(self, signal, file_path,i):
         if self._is_padding_neccesary(signal):
             signal = self._apply_padding(signal)
+        signal = self.loudness_normaliser.normalise(signal)
         feature = self.extractor.extract(signal)
         norm_feature = self.normaliser.normalise(feature)
-        save_path = self.saver.save_feature(norm_feature, file_path)
+        save_path = self.saver.save_feature(norm_feature, file_path, i)
         self._store_min_max_value(save_path, feature.min(), feature.max())
     
     def _is_padding_neccesary(self, signal):
@@ -178,17 +237,21 @@ class PreprocessingPipeline:
 if __name__ == "__main__":
     FRAME_SIZE = 512
     HOP_LEN = 256
-    DURATION = 0.74 #in seconds
+    DURATION = 3 #in seconds
     SAMPLE_RATE = 22050
+    LOUDNESS_NORMALISE_MODE = "peak"
+    LOUDNESS_NORMALISE_TARGET = -1.0
     MONO = True
 
-    SPECTROGRAM_SAVE_DIR = "./dataset/free-spoken-digit-dataset-master/spectrograms"
-    MIN_MAX_VALUES_SAVE_DIR = "./dataset/free-spoken-digit-dataset-master/"
-    FILES_DIR = "./dataset/free-spoken-digit-dataset-master/recordings"
+    SPECTROGRAM_SAVE_DIR = "./dataset/Yamaha_FM/spectrograms"
+    MIN_MAX_VALUES_SAVE_DIR = "./dataset/Yamaha_FM/"
+    FILES_DIR = "./dataset/Yamaha_FM/recordings"
 
     #Instatiate all objects
     loader = Loader(SAMPLE_RATE,DURATION,MONO)
     padder = Padder()
+    loudness_normaliser = LoudnessNormaliser(
+        SAMPLE_RATE, LOUDNESS_NORMALISE_TARGET, LOUDNESS_NORMALISE_MODE)
     extractor = LogSpectrogramExtractor(FRAME_SIZE,HOP_LEN)
     normaliser = MinMaxNormaliser(0, 1)
     saver = Saver(SPECTROGRAM_SAVE_DIR, MIN_MAX_VALUES_SAVE_DIR)
@@ -196,6 +259,7 @@ if __name__ == "__main__":
     preprocessing_pipeline = PreprocessingPipeline()
     preprocessing_pipeline.loader = loader
     preprocessing_pipeline.padder = padder
+    preprocessing_pipeline.loudness_normaliser = loudness_normaliser
     preprocessing_pipeline.extractor = extractor
     preprocessing_pipeline.normaliser = normaliser 
     preprocessing_pipeline.saver = saver

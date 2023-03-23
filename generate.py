@@ -11,7 +11,7 @@ HOP_LEN = 256
 SAMPLE_RATE = 22050
 ORIGINAL_FILE_PATH = "generated/original/"
 GENERATED_FILE_PATH = "generated/generated/"
-MIN_MAX_VALUES_PATH = "dataset/free-spoken-digit-dataset-master/min_max_values.pkl"
+MIN_MAX_VALUES_PATH = "dataset/fsdd/min_max_values.pkl"
 
 # Sample a number of random spectrograms from the dataset
 
