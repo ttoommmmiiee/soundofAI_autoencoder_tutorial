@@ -5,7 +5,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, \
 Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda     
 from tensorflow.keras import backend as K
-from tensorflow.keras.optimizers import Adam 
+from tensorflow.keras.optimizers.legacy import Adam 
 from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
 import tensorflow as tf 
@@ -47,6 +47,7 @@ class VAE:
         self.latent_space_dim = latent_space_dim
         self.reconstruction_loss_weight = 1000000
 
+        print(input_shape)
 
         self.encoder = None
         self.decoder = None

@@ -12,7 +12,7 @@ import numpy as np
 import os
 import pickle
 import pyloudnorm as pyln
-from utils import is_hidden
+import utils 
 
 from effortless_config import Config
 
@@ -37,7 +37,7 @@ class Loader:
         self.mono = mono
 
     def load(self, file_path):
-        if not is_hidden(file_path): 
+        if not utils.is_hidden(file_path): 
             signal = librosa.load(file_path,
                                 sr=self.sample_rate,
                                 duration=None,
@@ -208,22 +208,24 @@ class PreprocessingPipeline:
         for root, _, files in os.walk(audio_file_dir):
             for file in files:
                 file_path = os.path.join(root,file)
-                self._chopper_loop(file_path)
-                print(f"Processed file {file_path}")
+                num_chunks = self._chopper_loop(file_path)
+                print(f"Processed file {file_path} into {num_chunks} chunks")
         self.saver.save_min_max_values(self.min_max_values)
 
     def _chopper_loop(self,file_path):
+        num_chunks = 0
         signal = self.loader.load(file_path)
         if len(signal) > self._num_expected_samples:
             for i in range(int(len(signal) / self._num_expected_samples)):
                 start_index = i * self._num_expected_samples
                 end_index = (i + 1) * self._num_expected_samples
-    
                 self._process_file(
                     signal[start_index:end_index],
                     file_path,
                     i
                     )
+                num_chunks = num_chunks + 1
+        return num_chunks
 
     def _process_file(self, signal, file_path,i):
         if self._is_padding_neccesary(signal):
@@ -254,10 +256,11 @@ if __name__ == "__main__":
 
     config.parse_args()
 
+    MODEL_INPUT_SIZE = 128
     FRAME_SIZE = config.FRAME_SIZE
     HOP_LEN = config.HOP_LEN
-    DURATION = config.DURATION
     SAMPLE_RATE = config.SAMPLE_RATE
+    DURATION = HOP_LEN * MODEL_INPUT_SIZE / SAMPLE_RATE
     LOUDNESS_NORMALISE_MODE = config.LOUDNESS_NORMALISE_MODE
     LOUDNESS_NORMALISE_TARGET = config.LOUDNESS_NORMALISE_TARGET
     MONO = config.MONO
@@ -273,6 +276,7 @@ if __name__ == "__main__":
         SAMPLE_RATE, LOUDNESS_NORMALISE_TARGET, LOUDNESS_NORMALISE_MODE)
     extractor = LogSpectrogramExtractor(FRAME_SIZE,HOP_LEN)
     normaliser = MinMaxNormaliser(0, 1)
+    utils.create_folder_if_it_doesnt_exist(SPECTROGRAM_SAVE_DIR)
     saver = Saver(SPECTROGRAM_SAVE_DIR, MIN_MAX_VALUES_SAVE_DIR)
 
     preprocessing_pipeline = PreprocessingPipeline()

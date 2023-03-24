@@ -13,3 +13,7 @@ def has_hidden_attribute(filepath):
     except (AttributeError, AssertionError):
         result = False
     return result
+
+def create_folder_if_it_doesnt_exist(save_folder):
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
