@@ -3,9 +3,3 @@
 *npy
 *.pyc
 *.pkl
-arg.py
-*.pkl
-dataset/.DS_Store
-dataset/free-spoken-digit-dataset-master/.DS_Store
-*.pyc
-*.pkl
