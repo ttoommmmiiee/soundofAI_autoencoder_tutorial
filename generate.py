@@ -11,7 +11,7 @@ HOP_LEN = 256
 SAMPLE_RATE = 22050
 ORIGINAL_FILE_PATH = "generated/original/"
 GENERATED_FILE_PATH = "generated/generated/"
-MIN_MAX_VALUES_PATH = "dataset/fsdd/min_max_values.pkl"
+MIN_MAX_VALUES_PATH = "dataset/Yamaha_FM/min_max_values.pkl"
 
 # Sample a number of random spectrograms from the dataset
 
@@ -52,6 +52,8 @@ if __name__ == "__main__":
         min_max_values, 
         5)
     
+    sampled_spectrograms = sampled_spectrograms[:, :, 0:128, :]
+
     #generate audio for sampled spectrograms
     new_generated_signals, _ = sound_generator.generate(
         sampled_spectrograms, sampled_min_max_values)

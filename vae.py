@@ -109,15 +109,15 @@ class VAE:
                                                          + kl_loss
         return combined_loss
 
-    # def _calculate_reconstruction_loss(self, y_target, y_predicted):
-    #     error = y_target - y_predicted
-    #     reconstruction_loss = K.mean(K.square(error), axis=[1,2,3])
-    #     return reconstruction_loss
+    def _calculate_reconstruction_loss(self, y_target, y_predicted):
+        error = y_target - y_predicted
+        reconstruction_loss = K.mean(K.square(error), axis=[1,2,3])
+        return reconstruction_loss
     
-    # def _calculate_kl_loss(self, y_target, y_predicted):
-    #     kl_loss = -0.5 * K.sum(1+self.log_variance - K.square(self.mu) - 
-    #                            K.exp(self.log_variance), axis=1)
-    #     return kl_loss
+    def _calculate_kl_loss(self, y_target, y_predicted):
+        kl_loss = -0.5 * K.sum(1+self.log_variance - K.square(self.mu) - 
+                               K.exp(self.log_variance), axis=1)
+        return kl_loss
 
     def _create_folder_if_it_doesnt_exist(self, save_folder):
         if not os.path.exists(save_folder):   
@@ -263,10 +263,10 @@ class VAE:
 
 if __name__ ==  '__main__':
     autoencoder = VAE(
-        input_shape=(28, 28, 1),
-        conv_filters=(32, 64, 64, 64), 
-        conv_kernels=(3,  3,  3,  3),
-        conv_strides=(1,  2,  2,  1),
-        latent_space_dim=2 
+        input_shape=(256, 64, 1),
+        conv_filters=(512, 256, 128, 64, 32),
+        conv_kernels=(3,  3,  3,  3, 3),
+        conv_strides=(2,  2,  2,  2, (2, 1)),
+        latent_space_dim=128
     )
     autoencoder.summary()

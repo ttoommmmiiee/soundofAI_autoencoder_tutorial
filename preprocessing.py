@@ -77,7 +77,8 @@ class LoudnessNormaliser:
             if np.max(np.abs(signal)) > 0:
                 normalised_audio = pyln.normalize.peak(signal, self.target)
             else:
-                normalised_audio = signal
+                ## if silent then add some noise
+                normalised_audio = np.random.random(len(signal))*0.01-0.005
         else:
             # measure the loudness first
             meter = pyln.Meter(self.sample_rate)  # create BS.1770 meter

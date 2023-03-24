@@ -27,11 +27,9 @@ def load_ffsd(spectrograms_path):
     x_train = x_train[...,np.newaxis]
     return x_train, file_paths
 
-
-
 def train(x_train, learning_rate, batch_size, epochs, latent_space_dim):
     vae = VAE(
-        input_shape=(256, 64, 1),
+        input_shape=(256, 128, 1),
         conv_filters=(512, 256, 128, 64, 32),
         conv_kernels=(3,  3,  3,  3, 3),
         conv_strides=(2,  2,  2,  2, (2, 1)),
@@ -42,10 +40,11 @@ def train(x_train, learning_rate, batch_size, epochs, latent_space_dim):
     vae.train(x_train,batch_size,epochs)
 
     return vae
-    
 
 if __name__ == "__main__":
     x_train, _ = load_ffsd(SPECTROGRAMS_PATH)
+    x_train = x_train[:,:,0:128,:]
+
     vae = train(x_train, 
                 LEARNING_RATE, 
                 BATCH_SIZE, 
