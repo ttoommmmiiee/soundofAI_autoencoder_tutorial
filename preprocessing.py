@@ -27,12 +27,7 @@ class config(Config):  # lowercase "c" optional
     LOUDNESS_NORMALISE_TARGET = -1.0
     MONO = True
 
-    FILES_DIR = "./dataset/Yamaha_FM/"
-    SPECTROGRAM_SAVE_DIR = f"{FILES_DIR}spectrograms"
-    MIN_MAX_VALUES_SAVE_DIR = FILES_DIR
-    AUDIO_FILES_DIR = f"{FILES_DIR}recordings"
-
-    #config.SOME_INTEGER_SETTING
+    FILES_DIR = "./dataset/Yamaha_FM"
 
 class Loader:
     '''Loader is responsible for loading an audio file'''
@@ -267,11 +262,9 @@ if __name__ == "__main__":
     LOUDNESS_NORMALISE_TARGET = config.LOUDNESS_NORMALISE_TARGET
     MONO = config.MONO
 
-    print("FRAME_SIZE = ", FRAME_SIZE)
-
-    SPECTROGRAM_SAVE_DIR = config.SPECTROGRAM_SAVE_DIR
-    MIN_MAX_VALUES_SAVE_DIR = config.MIN_MAX_VALUES_SAVE_DIR
-    AUDIO_FILES_DIR = config.AUDIO_FILES_DIR
+    SPECTROGRAM_SAVE_DIR = f"{config.FILES_DIR}/spectrograms"
+    MIN_MAX_VALUES_SAVE_DIR = f"{config.FILES_DIR}/"
+    AUDIO_FILES_DIR = f"{config.FILES_DIR}/recordings"
 
     #Instatiate all objects
     loader = Loader(SAMPLE_RATE,DURATION,MONO)
