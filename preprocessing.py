@@ -14,6 +14,26 @@ import pickle
 import pyloudnorm as pyln
 from utils import is_hidden
 
+from effortless_config import Config
+
+
+class config(Config):  # lowercase "c" optional
+
+    FRAME_SIZE = 512
+    HOP_LEN = 256
+    DURATION = 3  # in seconds
+    SAMPLE_RATE = 22050
+    LOUDNESS_NORMALISE_MODE = "peak"
+    LOUDNESS_NORMALISE_TARGET = -1.0
+    MONO = True
+
+    FILES_DIR = "./dataset/Yamaha_FM/"
+    SPECTROGRAM_SAVE_DIR = f"{FILES_DIR}spectrograms"
+    MIN_MAX_VALUES_SAVE_DIR = FILES_DIR
+    AUDIO_FILES_DIR = f"{FILES_DIR}recordings"
+
+    #config.SOME_INTEGER_SETTING
+
 class Loader:
     '''Loader is responsible for loading an audio file'''
     def __init__(self, sample_rate, duration, mono):
@@ -236,17 +256,22 @@ class PreprocessingPipeline:
         }
 
 if __name__ == "__main__":
-    FRAME_SIZE = 512
-    HOP_LEN = 256
-    DURATION = 3 #in seconds
-    SAMPLE_RATE = 22050
-    LOUDNESS_NORMALISE_MODE = "peak"
-    LOUDNESS_NORMALISE_TARGET = -1.0
-    MONO = True
 
-    SPECTROGRAM_SAVE_DIR = "./dataset/Yamaha_FM/spectrograms"
-    MIN_MAX_VALUES_SAVE_DIR = "./dataset/Yamaha_FM/"
-    FILES_DIR = "./dataset/Yamaha_FM/recordings"
+    config.parse_args()
+
+    FRAME_SIZE = config.FRAME_SIZE
+    HOP_LEN = config.HOP_LEN
+    DURATION = config.DURATION
+    SAMPLE_RATE = config.SAMPLE_RATE
+    LOUDNESS_NORMALISE_MODE = config.LOUDNESS_NORMALISE_MODE
+    LOUDNESS_NORMALISE_TARGET = config.LOUDNESS_NORMALISE_TARGET
+    MONO = config.MONO
+
+    print("FRAME_SIZE = ", FRAME_SIZE)
+
+    SPECTROGRAM_SAVE_DIR = config.SPECTROGRAM_SAVE_DIR
+    MIN_MAX_VALUES_SAVE_DIR = config.MIN_MAX_VALUES_SAVE_DIR
+    AUDIO_FILES_DIR = config.AUDIO_FILES_DIR
 
     #Instatiate all objects
     loader = Loader(SAMPLE_RATE,DURATION,MONO)
@@ -265,5 +290,5 @@ if __name__ == "__main__":
     preprocessing_pipeline.normaliser = normaliser 
     preprocessing_pipeline.saver = saver
 
-    preprocessing_pipeline.process(FILES_DIR)
+    preprocessing_pipeline.process(AUDIO_FILES_DIR)
 

@@ -1,3 +1,6 @@
 *.wav
 *DS_Store
 *npy
+*.pyc
+*.pkl
+arg.py
