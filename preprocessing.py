@@ -21,7 +21,7 @@ class config(Config):  # lowercase "c" optional
 
     FRAME_SIZE = 512
     HOP_LEN = 256
-    DURATION = 3  # in seconds
+    #DURATION = 3  # in seconds
     SAMPLE_RATE = 22050
     LOUDNESS_NORMALISE_MODE = "peak"
     LOUDNESS_NORMALISE_TARGET = -1.0

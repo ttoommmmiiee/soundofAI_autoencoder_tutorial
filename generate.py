@@ -14,6 +14,7 @@ from effortless_config import Config
 
 class config(Config):  
 
+    MODEL_NAME = "model"
     START_INDEX = 0
     NUM_EXAMPLES = 5 
     HOP_LEN = 256
@@ -61,6 +62,7 @@ if __name__ == "__main__":
 
     config.parse_args()
 
+    MODEL_NAME = config.MODEL_NAME
     HOP_LEN = config.HOP_LEN
     SAMPLE_RATE = config.SAMPLE_RATE
     SPECTROGRAMS_PATH = f"{config.FILES_DIR}/spectrograms/"
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     NUM_EXAMPLES = config.NUM_EXAMPLES
 
     #Load Model
-    vae = VAE.load("model")
+    vae = VAE.load(MODEL_NAME)
     model_input_size = vae.input_shape[1]
 
     #init soundgenerator

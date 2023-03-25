@@ -6,7 +6,7 @@ from utils import is_hidden
 from effortless_config import Config
 
 class config(Config):
-
+    MODEL_NAME = "model"
     LEARNING_RATE = 0.0005
     BATCH_SIZE = 64
     EPOCHS = 150
@@ -46,6 +46,7 @@ def train(x_train, learning_rate, batch_size, epochs, latent_space_dim):
 if __name__ == "__main__":
     config.parse_args()
 
+    MODEL_NAME = config.MODEL_NAME
     MODEL_INPUT_SIZE = 128
     LEARNING_RATE = config.LEARNING_RATE
     BATCH_SIZE = config.BATCH_SIZE
@@ -62,4 +63,4 @@ if __name__ == "__main__":
                 EPOCHS, 
                 LATENT_SPACE_DIM,
                 )
-    vae.save("model")
+    vae.save(MODEL_NAME)
