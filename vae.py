@@ -2,13 +2,18 @@ import os
 import pickle
 
 from tensorflow.keras import Model
+from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, \
 Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda     
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers.legacy import Adam 
 from tensorflow.keras.losses import MeanSquaredError
+from tensorflow.keras.callbacks import EarlyStopping, \
+    LearningRateScheduler, ModelCheckpoint
 import numpy as np
 import tensorflow as tf 
+
+import utils
 
 tf.compat.v1.disable_eager_execution()
 
@@ -52,6 +57,7 @@ class VAE:
         self.encoder = None
         self.decoder = None
         self.model = None 
+        self.checkpoint_callback = None
 
         self._num_conv_layers = len(conv_filters)
         self._shape_before_bottleneck = None
@@ -71,13 +77,48 @@ class VAE:
                            metrics=[_calculate_reconstruction_loss,
                                     calculate_kl_loss(self)])
 
-    def train(self, x_train, batch_size, num_epochs):
+    def train(self, x_train, batch_size, max_epochs, checkpoint_dir, initial_epoch=0):
+        utils.create_folder_if_it_doesnt_exist(checkpoint_dir)
+        file_path = os.path.join(
+            checkpoint_dir, 'model-{epoch:02d}-{loss:.2f}.hdf5')
+        
+        checkpoint_callback = CheckpointCallback(filepath=file_path,
+                                                 monitor='loss',
+                                                 mode='min',
+                                                 save_best_only=True,
+                                                 verbose=1,)
+        
         self.model.fit(x_train, 
                        x_train,
                        batch_size,
-                       epochs = num_epochs,
+                       epochs=max_epochs,
+                       callbacks=[checkpoint_callback],
                        shuffle = True,
+                       initial_epoch=initial_epoch
                        )
+        
+    def continue_training(self, x_train, batch_size, max_epochs,
+                          checkpoint_filepath, model_path, opt_path):
+        epoch, model, opt = self._load_model_data(model_path, opt_path)
+
+        def compile(self):
+            optimizer = Adam.from_config(opt)
+            self.model.compile(optimizer=optimizer,
+                           loss=self._calculate_combined_loss,
+                           metrics=[_calculate_reconstruction_loss,
+                                    calculate_kl_loss(self)])
+
+        self.train(x_train, batch_size, max_epochs,
+                   checkpoint_filepath, initial_epoch=epoch)
+
+    
+    def _load_model_data(self, model_path, opt_path):
+        model = load_model(model_path, safe_mode=False)
+        with open(opt_path, 'rb') as fp:
+            d = pickle.load(fp)
+            epoch = d['epoch']
+            opt = d['opt']
+            return epoch, model, opt
 
     def save(self, save_folder="."):
         self._create_folder_if_it_doesnt_exist(save_folder)
@@ -139,7 +180,6 @@ class VAE:
     def _save_weights(self, save_folder):
         save_path = os.path.join(save_folder, "weights.h5")
         self.model.save_weights(save_path)  
-
 
     def _build(self):
         self._build_encoder()
@@ -241,6 +281,8 @@ class VAE:
         x = BatchNormalization(name=f"encoder_bn_{layer_number}")(x)
         return x 
     
+
+
     def _add_bottleneck(self, x):
         '''
         Flatten data and bottleneck with Guassian sampling (Dense layer)
@@ -250,17 +292,47 @@ class VAE:
         self.mu = Dense(self.latent_space_dim, name="mu")(x)
         self.log_variance = Dense(self.latent_space_dim, name="log_variance")(x)
 
+        shape_val = K.shape(self.mu) ##Trying to fix something...
+
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
             epsilon = K.random_normal(
-                shape=K.shape(self.mu), mean=0., stddev=1.)
+                shape=shape_val, mean=0., stddev=1.)
             sampled_point = mu + K.exp(log_variance / 2) * epsilon
             return sampled_point
 
         x = Lambda(sample_point_from_normal_distribution,
                    name="encoder_output")([self.mu, self.log_variance])
         return x
+
+
+class CheckpointCallback(ModelCheckpoint):
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+
+  def on_epoch_end(self, epoch, logs=None):
+    print("1", epoch, logs)
+    super().on_epoch_end(epoch, logs)
+    print("2", epoch, logs)
+    # Also save the optimizer state
+    filepath = self._get_file_path(epoch=epoch,
+                                   logs=logs, batch=None)
+    filepath = filepath.rsplit(".", 1)[0]
+    filepath += ".pkl"
+
+
+    print(filepath, epoch, logs)
     
+
+    with open(filepath, 'wb') as fp:
+      pickle.dump(
+          {
+              'opt': self.model.optimizer.get_config(),
+              'epoch': epoch+1
+              # Add additional keys if you need to store more values
+          }, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    print('\nEpoch %05d: saving optimizaer to %s' % (epoch + 1, filepath))
+
 
 if __name__ ==  '__main__':
     autoencoder = VAE(

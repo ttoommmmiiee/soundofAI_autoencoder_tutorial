@@ -12,6 +12,8 @@ class config(Config):
     EPOCHS = 150
     LATENT_SPACE_DIM = 128
     CHECKPOINT_FILEPATH = "./checkpoints"
+    MODEL_PATH = None
+    OPT_PATH = None
     SPECTROGRAMS_PATH = "./dataset/Yamaha_FM/spectrograms/"
 
 def load_dataset(spectrograms_path):
@@ -30,7 +32,7 @@ def load_dataset(spectrograms_path):
     x_train = x_train[...,np.newaxis]
     return x_train, file_paths
 
-def train(x_train, learning_rate, batch_size, epochs, checkpoint_filepath, latent_space_dim):
+def ContiunieTrain(x_train, batch_size, epochs, checkpoint_filepath, model_path, opt_path, latent_space_dim):
     vae = VAE(
         input_shape=(256, 128, 1),
         conv_filters=(512, 256, 128, 64, 32),
@@ -39,8 +41,7 @@ def train(x_train, learning_rate, batch_size, epochs, checkpoint_filepath, laten
         latent_space_dim=latent_space_dim
     )
     vae.summary()
-    vae.compile(learning_rate)
-    vae.train(x_train,batch_size,epochs, checkpoint_filepath)
+    vae.continue_training(x_train,batch_size,epochs, checkpoint_filepath, model_path, opt_path)
 
     return vae
 
@@ -53,17 +54,20 @@ if __name__ == "__main__":
     BATCH_SIZE = config.BATCH_SIZE
     EPOCHS = config.EPOCHS
     CHECKPOINT_FILEPATH = config.CHECKPOINT_FILEPATH
+    MODEL_PATH = config.MODEL_PATH
+    OPT_PATH = config.OPT_PATH
     LATENT_SPACE_DIM = config.LATENT_SPACE_DIM
     SPECTROGRAMS_PATH = config.SPECTROGRAMS_PATH
 
     x_train, _ = load_dataset(SPECTROGRAMS_PATH)
     x_train = x_train[:,:,0:MODEL_INPUT_SIZE,:]
 
-    vae = train(x_train, 
-                LEARNING_RATE, 
+    vae = ContiunieTrain(x_train, 
                 BATCH_SIZE, 
                 EPOCHS, 
                 CHECKPOINT_FILEPATH,
+                MODEL_PATH, 
+                OPT_PATH,
                 LATENT_SPACE_DIM,
                 )
     vae.save(MODEL_NAME)
