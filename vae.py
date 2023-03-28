@@ -82,43 +82,24 @@ class VAE:
         file_path = os.path.join(
             checkpoint_dir, 'model-{epoch:02d}-{loss:.2f}.hdf5')
         
-        checkpoint_callback = CheckpointCallback(filepath=file_path,
+        checkpoint_callback = ModelCheckpoint(filepath=file_path,
                                                  monitor='loss',
                                                  mode='min',
+                                                 save_weights_only=True,
                                                  save_best_only=True,
                                                  verbose=1,)
         
         self.model.fit(x_train, 
                        x_train,
                        batch_size,
-                       epochs=max_epochs,
+                       epochs=initial_epoch + max_epochs,
                        callbacks=[checkpoint_callback],
                        shuffle = True,
                        initial_epoch=initial_epoch
                        )
         
-    def continue_training(self, x_train, batch_size, max_epochs,
-                          checkpoint_filepath, model_path, opt_path):
-        epoch, model, opt = self._load_model_data(model_path, opt_path)
-
-        def compile(self):
-            optimizer = Adam.from_config(opt)
-            self.model.compile(optimizer=optimizer,
-                           loss=self._calculate_combined_loss,
-                           metrics=[_calculate_reconstruction_loss,
-                                    calculate_kl_loss(self)])
-
-        self.train(x_train, batch_size, max_epochs,
-                   checkpoint_filepath, initial_epoch=epoch)
-
-    
-    def _load_model_data(self, model_path, opt_path):
-        model = load_model(model_path, safe_mode=False)
-        with open(opt_path, 'rb') as fp:
-            d = pickle.load(fp)
-            epoch = d['epoch']
-            opt = d['opt']
-            return epoch, model, opt
+    def continue_training(self):
+        pass
 
     def save(self, save_folder="."):
         self._create_folder_if_it_doesnt_exist(save_folder)
@@ -127,6 +108,10 @@ class VAE:
 
     def load_weights(self, weights_path):
         self.model.load_weights(weights_path)
+
+    def latest_checkpoint(self, checkpoint_filepath):
+        latest = tf.train.latest_checkpoint(checkpoint_filepath)
+        return latest
 
     def reconstruct(self, images):
         latent_representations = self.encoder.predict(images)
@@ -292,46 +277,16 @@ class VAE:
         self.mu = Dense(self.latent_space_dim, name="mu")(x)
         self.log_variance = Dense(self.latent_space_dim, name="log_variance")(x)
 
-        shape_val = K.shape(self.mu) ##Trying to fix something...
-
         def sample_point_from_normal_distribution(args):
             mu, log_variance = args
             epsilon = K.random_normal(
-                shape=shape_val, mean=0., stddev=1.)
+                shape=K.shape(self.mu), mean=0., stddev=1.)
             sampled_point = mu + K.exp(log_variance / 2) * epsilon
             return sampled_point
 
         x = Lambda(sample_point_from_normal_distribution,
                    name="encoder_output")([self.mu, self.log_variance])
         return x
-
-
-class CheckpointCallback(ModelCheckpoint):
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-
-  def on_epoch_end(self, epoch, logs=None):
-    print("1", epoch, logs)
-    super().on_epoch_end(epoch, logs)
-    print("2", epoch, logs)
-    # Also save the optimizer state
-    filepath = self._get_file_path(epoch=epoch,
-                                   logs=logs, batch=None)
-    filepath = filepath.rsplit(".", 1)[0]
-    filepath += ".pkl"
-
-
-    print(filepath, epoch, logs)
-    
-
-    with open(filepath, 'wb') as fp:
-      pickle.dump(
-          {
-              'opt': self.model.optimizer.get_config(),
-              'epoch': epoch+1
-              # Add additional keys if you need to store more values
-          }, fp, protocol=pickle.HIGHEST_PROTOCOL)
-    print('\nEpoch %05d: saving optimizaer to %s' % (epoch + 1, filepath))
 
 
 if __name__ ==  '__main__':

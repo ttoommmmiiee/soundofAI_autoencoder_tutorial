@@ -17,3 +17,9 @@ def has_hidden_attribute(filepath):
 def create_folder_if_it_doesnt_exist(save_folder):
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
+
+
+def latest_file_in_dir(path):
+    files = os.listdir(path)
+    paths = [os.path.join(path, basename) for basename in files]
+    return max(paths, key=os.path.getctime)

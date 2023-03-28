@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from vae import VAE
-from utils import is_hidden
+import utils
 
 from effortless_config import Config
 
@@ -12,6 +12,7 @@ class config(Config):
     EPOCHS = 150
     LATENT_SPACE_DIM = 128
     CHECKPOINT_FILEPATH = "./checkpoints"
+    LATEST_WEIGHTS = None 
     MODEL_PATH = None
     OPT_PATH = None
     SPECTROGRAMS_PATH = "./dataset/Yamaha_FM/spectrograms/"
@@ -22,7 +23,7 @@ def load_dataset(spectrograms_path):
     for root, _, file_names in os.walk(spectrograms_path):
         for file_name in file_names:
             file_path = os.path.join(root, file_name)
-            if not is_hidden(file_path):
+            if not utils.is_hidden(file_path):
                 spectrogram = np.load(file_path, allow_pickle=True)
                 x_train.append(spectrogram)
                 file_paths.append(file_path)
@@ -32,7 +33,7 @@ def load_dataset(spectrograms_path):
     x_train = x_train[...,np.newaxis]
     return x_train, file_paths
 
-def ContiunieTrain(x_train, batch_size, epochs, checkpoint_filepath, model_path, opt_path, latent_space_dim):
+def ContiunieTrain(x_train, batch_size, epochs, learning_rate, checkpoint_filepath, latent_space_dim):
     vae = VAE(
         input_shape=(256, 128, 1),
         conv_filters=(512, 256, 128, 64, 32),
@@ -41,7 +42,17 @@ def ContiunieTrain(x_train, batch_size, epochs, checkpoint_filepath, model_path,
         latent_space_dim=latent_space_dim
     )
     vae.summary()
-    vae.continue_training(x_train,batch_size,epochs, checkpoint_filepath, model_path, opt_path)
+    vae.compile(learning_rate)
+
+    latest = utils.latest_file_in_dir(CHECKPOINT_FILEPATH)
+    print("latest ", latest)
+    initial_epoch = int(latest.split(
+        CHECKPOINT_FILEPATH)[1].split("-")[1])
+    print("initial_epoch", initial_epoch)
+    vae.load_weights(latest)
+
+    vae.train(x_train, batch_size, epochs,
+              checkpoint_filepath, initial_epoch=initial_epoch)
 
     return vae
 
@@ -54,6 +65,7 @@ if __name__ == "__main__":
     BATCH_SIZE = config.BATCH_SIZE
     EPOCHS = config.EPOCHS
     CHECKPOINT_FILEPATH = config.CHECKPOINT_FILEPATH
+    LATEST_WEIGHTS = config.LATEST_WEIGHTS
     MODEL_PATH = config.MODEL_PATH
     OPT_PATH = config.OPT_PATH
     LATENT_SPACE_DIM = config.LATENT_SPACE_DIM
@@ -65,9 +77,8 @@ if __name__ == "__main__":
     vae = ContiunieTrain(x_train, 
                 BATCH_SIZE, 
                 EPOCHS, 
+                LEARNING_RATE, 
                 CHECKPOINT_FILEPATH,
-                MODEL_PATH, 
-                OPT_PATH,
                 LATENT_SPACE_DIM,
                 )
     vae.save(MODEL_NAME)
